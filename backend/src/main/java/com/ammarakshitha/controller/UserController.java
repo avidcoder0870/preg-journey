@@ -1,6 +1,7 @@
 package com.ammarakshitha.controller;
 
 import com.ammarakshitha.dto.ApiResponse;
+import com.ammarakshitha.dto.ChangePasswordRequest;
 import com.ammarakshitha.dto.UserDTO;
 import com.ammarakshitha.dto.UserRegistrationRequest;
 import com.ammarakshitha.model.User;
@@ -172,6 +173,21 @@ public class UserController {
         User currentUser = userService.getUserByEmail(email);
         User updatedUser = userService.uploadProfilePhoto(currentUser.getId(), file);
         return ResponseEntity.ok(ApiResponse.success(updatedUser, "Profile photo uploaded successfully"));
+    }
+
+    @PostMapping("/me/change-password")
+    @Operation(summary = "Change current user password")
+    public ResponseEntity<ApiResponse<Void>> changeCurrentUserPassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        String email = authentication.getName();
+        User currentUser = userService.getUserByEmail(email);
+        userService.changePasswordWithValidation(
+            currentUser.getId(),
+            request.getCurrentPassword(),
+            request.getNewPassword()
+        );
+        return ResponseEntity.ok(ApiResponse.success(null, "Password changed successfully"));
     }
 
     @DeleteMapping("/{id}")

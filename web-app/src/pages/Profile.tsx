@@ -15,12 +15,18 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     department: '',
     designation: '',
+  })
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   })
 
   useEffect(() => {
@@ -69,6 +75,26 @@ export default function Profile() {
     const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : ''
     return `${first}${last}`.toUpperCase()
   }, [currentUser?.name])
+
+  // Check if profile form has changes
+  const hasProfileChanges = useMemo(() => {
+    if (!currentUser) return false
+    return (
+      formData.name !== (currentUser.name ?? '') ||
+      formData.phone !== (currentUser.phone ?? '') ||
+      formData.department !== (currentUser.department ?? '') ||
+      formData.designation !== (currentUser.designation ?? '')
+    )
+  }, [formData, currentUser])
+
+  // Check if all password fields are filled
+  const canChangePassword = useMemo(() => {
+    return (
+      passwordData.currentPassword.trim() !== '' &&
+      passwordData.newPassword.trim() !== '' &&
+      passwordData.confirmPassword.trim() !== ''
+    )
+  }, [passwordData])
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -172,6 +198,53 @@ export default function Profile() {
       toast.error(errorMsg)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    // Validation
+    if (!passwordData.currentPassword.trim()) {
+      toast.error('Current password is required')
+      return
+    }
+
+    if (!passwordData.newPassword.trim()) {
+      toast.error('New password is required')
+      return
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters')
+      return
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      toast.error('New password must be different from current password')
+      return
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New password and confirm password do not match')
+      return
+    }
+
+    try {
+      setIsChangingPassword(true)
+      await userService.changeMyPassword(passwordData.currentPassword, passwordData.newPassword)
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+      toast.success('Password changed successfully')
+    } catch (error: any) {
+      console.error('Failed to change password:', error)
+      const errorMsg = error.response?.data?.message || 'Failed to change password'
+      toast.error(errorMsg)
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -315,16 +388,91 @@ export default function Profile() {
               </div>
             </CardBody>
             <CardFooter className="flex justify-end gap-3">
-              <Button variant="secondary" type="button">
+              <Button 
+                variant="secondary" 
+                type="button"
+                onClick={() => {
+                  if (currentUser) {
+                    setFormData({
+                      name: currentUser.name ?? '',
+                      email: currentUser.email ?? '',
+                      phone: currentUser.phone ?? '',
+                      department: currentUser.department ?? '',
+                      designation: currentUser.designation ?? '',
+                    })
+                  }
+                }}
+                disabled={!hasProfileChanges}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSaving}>
+              <Button type="submit" disabled={isSaving || !hasProfileChanges}>
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
             </CardFooter>
           </form>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader 
+          title="Change Password" 
+          subtitle="Update your account password" 
+        />
+        <form onSubmit={handleChangePassword}>
+          <CardBody className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Input
+                label="Current Password"
+                type="password"
+                placeholder="Enter current password"
+                value={passwordData.currentPassword}
+                onChange={(event) =>
+                  setPasswordData((prev) => ({ ...prev, currentPassword: event.target.value }))
+                }
+              />
+              <Input
+                label="New Password"
+                type="password"
+                placeholder="Enter new password"
+                value={passwordData.newPassword}
+                onChange={(event) =>
+                  setPasswordData((prev) => ({ ...prev, newPassword: event.target.value }))
+                }
+              />
+              <Input
+                label="Confirm New Password"
+                type="password"
+                placeholder="Confirm new password"
+                value={passwordData.confirmPassword}
+                onChange={(event) =>
+                  setPasswordData((prev) => ({ ...prev, confirmPassword: event.target.value }))
+                }
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Password must be at least 8 characters and different from your current password
+            </p>
+          </CardBody>
+          <CardFooter className="flex justify-end gap-3">
+            <Button 
+              variant="secondary" 
+              type="button"
+              onClick={() => setPasswordData({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: '',
+              })}
+              disabled={!canChangePassword}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isChangingPassword || !canChangePassword}>
+              {isChangingPassword ? 'Changing...' : 'Change Password'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   )
 }

@@ -2,6 +2,7 @@ package com.ammarakshitha.service;
 
 import com.ammarakshitha.dto.UserDTO;
 import com.ammarakshitha.dto.UserRegistrationRequest;
+import com.ammarakshitha.exception.BusinessException;
 import com.ammarakshitha.exception.DuplicateResourceException;
 import com.ammarakshitha.exception.ResourceNotFoundException;
 import com.ammarakshitha.model.User;
@@ -140,6 +141,20 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         log.info("Password changed for user: {}", id);
+    }
+
+    public void changePasswordWithValidation(Long id, String currentPassword, String newPassword) {
+        User user = getUserById(id);
+        
+        // Validate current password
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BusinessException("Current password is incorrect");
+        }
+        
+        // Update to new password
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        log.info("Password changed successfully for user: {}", id);
     }
 
     @Transactional(readOnly = true)
