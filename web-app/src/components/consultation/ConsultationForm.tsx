@@ -44,6 +44,7 @@ export default function ConsultationForm({
     queryKey: ['doctors'],
     queryFn: userService.getDoctors,
   })
+  
 
   const scheduleMutation = useMutation({
     mutationFn: (data: ConsultationRequest) => consultationService.schedule(data),
