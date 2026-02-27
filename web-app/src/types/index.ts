@@ -155,6 +155,12 @@ export interface Patient {
   previousComplicationsDetails?: string;
   medicalHistory?: string;
   allergies?: string;
+  hadCSectionDelivery?: boolean;
+  hadNormalDelivery?: boolean;
+  hadAbortion?: boolean;
+  hadOtherPregnancy?: boolean;
+  otherPregnancyDetails?: string;
+  totalKidsBorn?: number;
   registrationDate: string;
   // Delivery Information
   deliveryOutcome?: DeliveryOutcome;
@@ -196,6 +202,12 @@ export interface PatientRegistrationRequest {
   previousComplicationsDetails?: string;
   medicalHistory?: string;
   allergies?: string;
+  hadCSectionDelivery?: boolean;
+  hadNormalDelivery?: boolean;
+  hadAbortion?: boolean;
+  hadOtherPregnancy?: boolean;
+  otherPregnancyDetails?: string;
+  totalKidsBorn?: number;
 }
 
 export interface DeliveryCompletionRequest {
