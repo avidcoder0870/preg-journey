@@ -164,6 +164,8 @@ export interface Patient {
   deliveryNotes?: string;
   babyWeight?: number;
   babyGender?: string;
+  numberOfBabies?: number;
+  babies?: Baby[];
   deliveryHospital?: string;
   deliveryCompletedBy?: User;
   // Mortality Information
@@ -198,6 +200,13 @@ export interface PatientRegistrationRequest {
   allergies?: string;
 }
 
+export interface Baby {
+  id?: number;
+  gender?: string;
+  weight?: number;
+  birthOrder?: number;
+}
+
 export interface DeliveryCompletionRequest {
   deliveryOutcome: DeliveryOutcome;
   deliveryType: DeliveryType;
@@ -206,6 +215,8 @@ export interface DeliveryCompletionRequest {
   babyWeight?: number;
   babyGender?: string;
   deliveryHospital?: string;
+  numberOfBabies?: number;
+  babies?: Baby[];
   mortalityDate?: string;
   mortalityCause?: string;
   mortalityNotes?: string;

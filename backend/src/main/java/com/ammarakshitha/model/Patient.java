@@ -158,11 +158,17 @@ public class Patient extends BaseEntity {
     private String deliveryNotes;
 
     @Column(name = "baby_weight")
-    private Double babyWeight;  // in kg
+    private Double babyWeight;  // in kg (deprecated - use babies relationship)
 
     @Column(name = "baby_gender")
     @Size(max = 10)
-    private String babyGender;
+    private String babyGender;  // (deprecated - use babies relationship)
+
+    @Column(name = "number_of_babies")
+    @Min(1)
+    @Max(4)
+    @Builder.Default
+    private Integer numberOfBabies = 1;  // Number of babies delivered
 
     @Column(name = "delivery_hospital")
     @Size(max = 200)
@@ -187,6 +193,12 @@ public class Patient extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delivery_completed_by")
     private User deliveryCompletedBy;
+
+    // Babies (for multiple births)
+    @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OrderBy("birthOrder ASC")
+    @Builder.Default
+    private List<Baby> babies = new ArrayList<>();
 
     // Health checks for this patient
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

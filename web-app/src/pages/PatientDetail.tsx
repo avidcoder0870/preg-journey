@@ -1,41 +1,41 @@
-import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { PatientTimeline, PregnancyTimeline } from '@/components/patient'
 import {
-  ArrowLeftIcon,
-  PencilIcon,
-  TrashIcon,
-  PhoneIcon,
-  MapPinIcon,
-  CalendarIcon,
-  IdentificationIcon,
-  CheckCircleIcon,
-  VideoCameraIcon,
-} from '@heroicons/react/24/outline'
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  RiskBadge,
-  PatientStatusBadge,
-  Badge,
-  Modal,
-  Input,
-  Select,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableEmpty,
-  ConsultationStatusBadge,
+    Badge,
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    ConsultationStatusBadge,
+    Input,
+    Modal,
+    PatientStatusBadge,
+    RiskBadge,
+    Select,
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableRow,
 } from '@/components/ui'
-import { patientService, alertService, healthCheckService, consultationService, userService, followUpService } from '@/services'
-import { PregnancyTimeline, PatientTimeline } from '@/components/patient'
-import { Patient, UserRole, DeliveryOutcome, DeliveryType, DeliveryCompletionRequest, ConsultationType, ConsultationRequest, User } from '@/types'
-import toast from 'react-hot-toast'
+import { alertService, consultationService, followUpService, healthCheckService, patientService, userService } from '@/services'
 import { useAuthStore } from '@/store/authStore'
+import { ConsultationRequest, ConsultationType, DeliveryCompletionRequest, DeliveryOutcome, DeliveryType, Patient, User, UserRole } from '@/types'
+import {
+    ArrowLeftIcon,
+    CalendarIcon,
+    CheckCircleIcon,
+    IdentificationIcon,
+    MapPinIcon,
+    PencilIcon,
+    PhoneIcon,
+    TrashIcon,
+    VideoCameraIcon,
+} from '@heroicons/react/24/outline'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import toast from 'react-hot-toast'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const DELIVERY_OUTCOMES = [
   { value: DeliveryOutcome.SUCCESSFUL, label: 'Successful Delivery' },
@@ -51,6 +51,7 @@ const DELIVERY_TYPES = [
   { value: DeliveryType.INDUCED, label: 'Induced Labor' },
 ]
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -65,6 +66,8 @@ export default function PatientDetail() {
     deliveryOutcome: DeliveryOutcome.SUCCESSFUL,
     deliveryType: DeliveryType.NORMAL,
     deliveryDate: new Date().toISOString().split('T')[0],
+    numberOfBabies: 1,
+    babies: [{ gender: '', weight: undefined, birthOrder: 1 }],
   })
   const [consultationData, setConsultationData] = useState<Partial<ConsultationRequest>>({
     type: ConsultationType.TELECONSULTATION,
@@ -444,12 +447,8 @@ export default function PatientDetail() {
                 <p className="font-medium">{patient.deliveryType || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Baby Gender</p>
-                <p className="font-medium">{patient.babyGender || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Baby Weight</p>
-                <p className="font-medium">{patient.babyWeight ? `${patient.babyWeight} kg` : '-'}</p>
+                <p className="text-sm text-gray-500">Number of Babies</p>
+                <p className="font-medium">{patient.numberOfBabies || 1}</p>
               </div>
               {patient.deliveryHospital && (
                 <div>
@@ -458,12 +457,57 @@ export default function PatientDetail() {
                 </div>
               )}
               {patient.deliveryNotes && (
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 lg:col-span-4">
                   <p className="text-sm text-gray-500">Notes</p>
                   <p className="font-medium">{patient.deliveryNotes}</p>
                 </div>
               )}
             </div>
+
+            {/* Babies Information */}
+            {patient.babies?.length ? (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-700 mb-3">
+                  {patient.babies.length === 1 ? 'Baby Information' : 'Babies Information'}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {patient.babies.map((baby, index) => (
+                    <div
+                      key={baby.id ?? baby.birthOrder ?? `${baby.gender || 'baby'}-${baby.weight ?? '0'}`}
+                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        {patient.babies.length === 1 ? 'Baby' : `Child ${index + 1}`}
+                      </p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">Gender:</span>
+                          <span className="text-sm font-medium">{baby.gender || '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">Weight:</span>
+                          <span className="text-sm font-medium">{baby.weight ? `${baby.weight} kg` : '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Legacy single baby info (backward compatibility) */}
+            {(!patient.babies || patient.babies.length === 0) && (patient.babyGender || patient.babyWeight) && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Baby Gender</p>
+                  <p className="font-medium">{patient.babyGender || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Baby Weight</p>
+                  <p className="font-medium">{patient.babyWeight ? `${patient.babyWeight} kg` : '-'}</p>
+                </div>
+              </div>
+            )}
 
             {/* Mortality Info */}
             {(patient.deliveryOutcome === DeliveryOutcome.MOTHER_MORTALITY ||
@@ -1008,29 +1052,77 @@ export default function PatientDetail() {
             />
           </div>
 
-          {/* Baby Information - Show only for successful delivery or baby mortality */}
+          {/* Number of Babies - Show only for successful delivery or baby mortality */}
           {deliveryData.deliveryOutcome !== DeliveryOutcome.MOTHER_MORTALITY && (
-            <div className="grid grid-cols-2 gap-4">
-              <Select
-                label="Baby Gender"
-                options={[
-                  { value: 'Male', label: 'Male' },
-                  { value: 'Female', label: 'Female' },
-                ]}
-                value={deliveryData.babyGender || ''}
-                onChange={(e) => setDeliveryData({ ...deliveryData, babyGender: e.target.value })}
-                placeholder="Select gender"
-              />
-              <Input
-                label="Baby Weight (kg)"
-                type="number"
-                step="0.1"
-                min="0.5"
-                max="10"
-                value={deliveryData.babyWeight || ''}
-                onChange={(e) => setDeliveryData({ ...deliveryData, babyWeight: parseFloat(e.target.value) })}
-              />
-            </div>
+            <>
+              <div>
+                <Select
+                  label="Number of Babies Delivered *"
+                  options={[
+                    { value: '1', label: '1 (Single)' },
+                    { value: '2', label: '2 (Twins)' },
+                    { value: '3', label: '3 (Triplets)' },
+                    { value: '4', label: '4 (Quadruplets)' },
+                  ]}
+                  value={deliveryData.numberOfBabies?.toString() || '1'}
+                  onChange={(e) => {
+                    const count = parseInt(e.target.value)
+                    const newBabies = Array.from({ length: count }, (_, i) => ({
+                      gender: deliveryData.babies?.[i]?.gender || '',
+                      weight: deliveryData.babies?.[i]?.weight || undefined,
+                      birthOrder: i + 1,
+                    }))
+                    setDeliveryData({ 
+                      ...deliveryData, 
+                      numberOfBabies: count,
+                      babies: newBabies,
+                    })
+                  }}
+                  required
+                />
+              </div>
+
+              {/* Dynamic Baby Information Fields */}
+              {deliveryData.babies?.map((baby, index) => (
+                <div key={baby.birthOrder} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="font-medium text-gray-700 mb-3">
+                    {deliveryData.numberOfBabies === 1 ? 'Baby Information' : `Child ${index + 1}`}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Select
+                      label="Gender"
+                      options={[
+                        { value: 'Male', label: 'Male' },
+                        { value: 'Female', label: 'Female' },
+                      ]}
+                      value={baby.gender || ''}
+                      onChange={(e) => {
+                        const newBabies = [...(deliveryData.babies || [])]
+                        newBabies[index] = { ...newBabies[index], gender: e.target.value }
+                        setDeliveryData({ ...deliveryData, babies: newBabies })
+                      }}
+                      placeholder="Select gender"
+                      required
+                    />
+                    <Input
+                      label="Weight (kg)"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="10"
+                      value={baby.weight || ''}
+                      onChange={(e) => {
+                        const newBabies = [...(deliveryData.babies || [])]
+                        newBabies[index] = { ...newBabies[index], weight: parseFloat(e.target.value) || undefined }
+                        setDeliveryData({ ...deliveryData, babies: newBabies })
+                      }}
+                      placeholder="e.g., 3.2"
+                      required
+                    />
+                  </div>
+                </div>
+              ))}
+            </>
           )}
 
           <div>
