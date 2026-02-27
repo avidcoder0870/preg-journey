@@ -1,11 +1,13 @@
 package com.ammarakshitha.service;
 
+import com.ammarakshitha.dto.BabyDTO;
 import com.ammarakshitha.dto.DeliveryCompletionRequest;
 import com.ammarakshitha.dto.PatientDTO;
 import com.ammarakshitha.dto.PatientRegistrationRequest;
 import com.ammarakshitha.dto.PatientSearchRequest;
 import com.ammarakshitha.exception.DuplicateResourceException;
 import com.ammarakshitha.exception.ResourceNotFoundException;
+import com.ammarakshitha.model.Baby;
 import com.ammarakshitha.model.Patient;
 import com.ammarakshitha.model.User;
 import com.ammarakshitha.model.enums.DeliveryOutcome;
@@ -260,40 +262,95 @@ public class PatientService {
         User completedBy = userRepository.findById(completedByUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Set delivery information
+        applyDeliveryInfo(patient, request, completedBy);
+        applyBabies(patient, request);
+        applyMortalityInfo(patient, request);
+        updatePatientStatus(patient, request.getDeliveryOutcome());
+
+        log.info("Delivery completed for patient {} by user {}, outcome: {}, number of babies: {}",
+                patientId, completedByUserId, request.getDeliveryOutcome(), patient.getNumberOfBabies());
+
+        return patientRepository.save(patient);
+    }
+
+    private void applyDeliveryInfo(Patient patient, DeliveryCompletionRequest request, User completedBy) {
         patient.setDeliveryOutcome(request.getDeliveryOutcome());
         patient.setDeliveryType(request.getDeliveryType());
         patient.setDeliveryDate(request.getDeliveryDate());
         patient.setDeliveryCompletedAt(LocalDateTime.now());
         patient.setDeliveryNotes(request.getDeliveryNotes());
-        patient.setBabyWeight(request.getBabyWeight());
-        patient.setBabyGender(request.getBabyGender());
         patient.setDeliveryHospital(request.getDeliveryHospital());
         patient.setDeliveryCompletedBy(completedBy);
+    }
 
-        // Set mortality information if applicable
+    private void applyBabies(Patient patient, DeliveryCompletionRequest request) {
+        List<BabyDTO> babies = request.getBabies();
+        Integer numberOfBabies = request.getNumberOfBabies();
+        if (numberOfBabies == null) {
+            numberOfBabies = (babies != null && !babies.isEmpty()) ? babies.size() : 1;
+        }
+        patient.setNumberOfBabies(numberOfBabies);
+
+        patient.getBabies().clear();
+
+        if (babies != null && !babies.isEmpty()) {
+            for (int i = 0; i < babies.size(); i++) {
+                BabyDTO babyDTO = babies.get(i);
+                Integer birthOrder = babyDTO.getBirthOrder() != null ? babyDTO.getBirthOrder() : (i + 1);
+                Baby baby = Baby.builder()
+                        .patient(patient)
+                        .gender(babyDTO.getGender())
+                        .weight(babyDTO.getWeight())
+                        .birthOrder(birthOrder)
+                        .build();
+                patient.getBabies().add(baby);
+            }
+
+            Baby firstBaby = patient.getBabies().get(0);
+            patient.setBabyGender(firstBaby.getGender());
+            patient.setBabyWeight(firstBaby.getWeight());
+            return;
+        }
+
+        // Backward compatibility: if no babies list provided, use legacy fields
+        if (request.getBabyGender() != null || request.getBabyWeight() != null) {
+            patient.setBabyWeight(request.getBabyWeight());
+            patient.setBabyGender(request.getBabyGender());
+            patient.setNumberOfBabies(1);
+
+            Baby baby = Baby.builder()
+                    .patient(patient)
+                    .gender(request.getBabyGender())
+                    .weight(request.getBabyWeight())
+                    .birthOrder(1)
+                    .build();
+            patient.getBabies().add(baby);
+        }
+    }
+
+    private void applyMortalityInfo(Patient patient, DeliveryCompletionRequest request) {
         if (request.getDeliveryOutcome() != DeliveryOutcome.SUCCESSFUL &&
             request.getDeliveryOutcome() != DeliveryOutcome.PENDING) {
             patient.setMortalityDate(request.getMortalityDate());
             patient.setMortalityCause(request.getMortalityCause());
             patient.setMortalityNotes(request.getMortalityNotes());
+            return;
         }
 
-        // Update patient status based on outcome
-        if (request.getDeliveryOutcome() == DeliveryOutcome.SUCCESSFUL) {
+        patient.setMortalityDate(null);
+        patient.setMortalityCause(null);
+        patient.setMortalityNotes(null);
+    }
+
+    private void updatePatientStatus(Patient patient, DeliveryOutcome outcome) {
+        if (outcome == DeliveryOutcome.SUCCESSFUL || outcome == DeliveryOutcome.BABY_MORTALITY) {
             patient.setStatus(PatientStatus.DISCHARGED);
-        } else if (request.getDeliveryOutcome() == DeliveryOutcome.BABY_MORTALITY) {
-            // Mother is alive but baby passed - mother's care is complete
-            patient.setStatus(PatientStatus.DISCHARGED);
-        } else if (request.getDeliveryOutcome() == DeliveryOutcome.MOTHER_MORTALITY ||
-                   request.getDeliveryOutcome() == DeliveryOutcome.BOTH_MORTALITY) {
+            return;
+        }
+
+        if (outcome == DeliveryOutcome.MOTHER_MORTALITY || outcome == DeliveryOutcome.BOTH_MORTALITY) {
             patient.setStatus(PatientStatus.INACTIVE);
         }
-
-        log.info("Delivery completed for patient {} by user {}, outcome: {}",
-                patientId, completedByUserId, request.getDeliveryOutcome());
-
-        return patientRepository.save(patient);
     }
 
     // Delivery Statistics
