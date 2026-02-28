@@ -23,7 +23,7 @@ import {
 } from '@/components/ui'
 import ConsultationForm from '@/components/consultation/ConsultationForm'
 import { consultationService, userService } from '@/services'
-import { ConsultationType } from '@/types'
+import { ConsultationType, Consultation } from '@/types'
 
 const PAGE_SIZE = 10
 
