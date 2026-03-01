@@ -1,6 +1,7 @@
 package com.ammarakshitha.model;
 
 import com.ammarakshitha.model.enums.FollowUpStatus;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -86,6 +87,7 @@ public class FollowUp extends BaseEntity {
     // Triggered by which health check or consultation
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "triggered_by_health_check_id")
+    @JsonBackReference
     private HealthCheck triggeredByHealthCheck;
 
     @ManyToOne(fetch = FetchType.LAZY)
