@@ -1,10 +1,12 @@
 package com.ammarakshitha.repository;
 
 import com.ammarakshitha.model.FollowUp;
+import com.ammarakshitha.model.HealthCheck;
 import com.ammarakshitha.model.enums.FollowUpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -90,4 +92,8 @@ public interface FollowUpRepository extends JpaRepository<FollowUp, Long> {
 
     // Date range query for calendar heatmap
     List<FollowUp> findByScheduledDateBetween(LocalDate startDate, LocalDate endDate);
+
+    @Modifying
+    @Query("DELETE FROM FollowUp f WHERE f.triggeredByHealthCheck = :healthCheck")
+    void deleteByTriggeredByHealthCheck(@Param("healthCheck") HealthCheck healthCheck);
 }

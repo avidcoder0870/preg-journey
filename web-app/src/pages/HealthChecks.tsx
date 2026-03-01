@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import {
   Button,
@@ -29,10 +29,15 @@ const PAGE_SIZE = 10
 export default function HealthChecks() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedHealthCheck, setSelectedHealthCheck] = useState<HealthCheck | null>(null)
   const [isReadOnly, setIsReadOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // deletion state
+  const [healthCheckToDelete, setHealthCheckToDelete] = useState<HealthCheck | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const page = parseInt(searchParams.get('page') || '0')
 
@@ -199,7 +204,8 @@ export default function HealthChecks() {
                         setShowCreateModal(true)
                       }}/>
                       <DeleteButton tooltip="Delete Health Check" onClick={() => {
-                        // Implement delete functionality here
+                        setHealthCheckToDelete(check)
+                        setShowDeleteConfirm(true)
                       }}/>
                     </TableCell>
                   </TableRow>
@@ -256,6 +262,53 @@ export default function HealthChecks() {
         size="xl"
       >
         <HealthCheckForm initialData={selectedHealthCheck || undefined} onSuccess={handleSuccess} readOnly={isReadOnly} />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setHealthCheckToDelete(null)
+        }}
+        title="Delete Health Check"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to delete the health check for <strong>{healthCheckToDelete?.patient.name}</strong>? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                setHealthCheckToDelete(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (healthCheckToDelete) {
+                  healthCheckService.delete(healthCheckToDelete.id)
+                    .then(() => {
+                      refetch()
+                      queryClient.invalidateQueries({ queryKey: ['alertCount'] })
+                      setShowDeleteConfirm(false)
+                      setHealthCheckToDelete(null)
+                    })
+                    .catch((error) => {
+                      console.error('Failed to delete health check:', error)
+                    })
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

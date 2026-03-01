@@ -7,6 +7,10 @@ export const healthCheckService = {
     return response.data.data
   },
 
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/health-checks/${id}`)
+  },
+
   getById: async (id: number): Promise<HealthCheck> => {
     const response = await api.get<ApiResponse<HealthCheck>>(`/health-checks/${id}`)
     return response.data.data

@@ -30,7 +30,7 @@ public class FollowUp extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to_id", nullable = false)
     private User assignedTo;
-
+    
     @Column(name = "scheduled_date", nullable = false)
     private LocalDate scheduledDate;
 

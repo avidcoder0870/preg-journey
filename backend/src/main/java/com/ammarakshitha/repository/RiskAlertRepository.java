@@ -96,6 +96,8 @@ public interface RiskAlertRepository extends JpaRepository<RiskAlert, Long> {
     long countBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
-
-	void deleteByHealthCheck(HealthCheck healthCheck);
+    
+    @Modifying
+    @Query("DELETE FROM RiskAlert r WHERE r.healthCheck = :healthCheck")
+    void deleteByHealthCheck(@Param("healthCheck") HealthCheck healthCheck);
 }
